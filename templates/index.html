@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cupcakes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>Cupcakes!</h1>
+    <ul id="cupcakes-list">
+        <!-- Cupcakes will be listed here -->
+    </ul>
+
+    <form id="cupcake-form">
+        <input type="text" id="flavor" placeholder="Flavor">
+        <input type="text" id="size" placeholder="Size">
+        <input type="number" id="rating" placeholder="Rating" min="0" max="10">
+        <input type="text" id="image" placeholder="Image URL">
+        <button type="submit">Add Cupcake</button>
+    </form>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+
+</body>
+</html>

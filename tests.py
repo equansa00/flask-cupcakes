@@ -1,18 +1,12 @@
 from unittest import TestCase
-
-from app import app
 from models import db, Cupcake
+from app import app
+import unittest
 
 # Use test database and don't clutter tests with SQL
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///cupcakes_test'
 app.config['SQLALCHEMY_ECHO'] = False
-
-# Make Flask errors be real errors, rather than HTML pages with error info
-app.config['TESTING'] = True
-
-db.drop_all()
-db.create_all()
-
+app.config['TESTING'] = True  # Make Flask errors be real errors
 
 CUPCAKE_DATA = {
     "flavor": "TestFlavor",
@@ -28,25 +22,32 @@ CUPCAKE_DATA_2 = {
     "image": "http://test.com/cupcake2.jpg"
 }
 
-
 class CupcakeViewsTestCase(TestCase):
     """Tests for views of API."""
 
     def setUp(self):
-        """Make demo data."""
+        """Before each test, set up test client and make demo data."""
+        app.config['TESTING'] = True
+        self.client = app.test_client()
+        
+        with app.app_context():
+            Cupcake.query.delete()
+            cupcake = Cupcake(**CUPCAKE_DATA)
+            db.session.add(cupcake)
+            db.session.commit()
+            self.cupcake = db.session.get(Cupcake, cupcake.id)  # Re-query the cupcake instance after committing
 
-        Cupcake.query.delete()
-
-        cupcake = Cupcake(**CUPCAKE_DATA)
-        db.session.add(cupcake)
-        db.session.commit()
-
-        self.cupcake = cupcake
+    @classmethod
+    def setUpClass(cls):
+        """Once before all tests, drop database and re-create it."""
+        with app.app_context():
+            db.drop_all()
+            db.create_all()
 
     def tearDown(self):
         """Clean up fouled transactions."""
-
-        db.session.rollback()
+        with app.app_context():
+            db.session.rollback()
 
     def test_list_cupcakes(self):
         with app.test_client() as client:
@@ -84,6 +85,30 @@ class CupcakeViewsTestCase(TestCase):
                 }
             })
 
+    def test_update_cupcake(self):
+        res = self.client.patch(f"/api/cupcakes/{self.cupcake.id}", 
+                                json={"flavor": "new_flavor", "size": "new_size", "rating": 1.5, "image": "new_image.jpg"})
+        json = res.get_json()
+    
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(json, {
+            "cupcake": {
+                "id": self.cupcake.id,
+                "flavor": "new_flavor",
+                "size": "new_size",
+                "rating": 1.5,
+                "image": "new_image.jpg"
+            }
+        })
+    
+    def test_delete_cupcake(self):
+        res = self.client.delete(f"/api/cupcakes/{self.cupcake.id}")
+        json = res.get_json()
+        
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(json, {"message": "Deleted"})
+
+
     def test_create_cupcake(self):
         with app.test_client() as client:
             url = "/api/cupcakes"
@@ -107,3 +132,6 @@ class CupcakeViewsTestCase(TestCase):
             })
 
             self.assertEqual(Cupcake.query.count(), 2)
+
+if __name__ == '__main__':
+    unittest.main()
